@@ -1,6 +1,6 @@
 # ConstraintLab
 
-Declare musical rules. Watch a constraint solver find a piece that provably satisfies them - and show its work.
+Declare musical rules. Watch a constraint solver find a piece that obeys every switched-on rule - and show its work.
 
 **Live demo:** https://utpal-kalita.github.io/constraintlab/
 
