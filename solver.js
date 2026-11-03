@@ -69,9 +69,10 @@ function solve(opts){
   log("progression","starts on tonic",progression[0]===0,TRIADS[mode][progression[0]].r);
   if(cadence==="authentic"){
     log("progression","ends on tonic (authentic cadence)",progression[n-1]===0,TRIADS[mode][progression[n-1]].r);
-    log("progression","dominant before final tonic",func[progression[n-2]]==="D",TRIADS[mode][progression[n-2]].r+" -> "+TRIADS[mode][progression[n-1]].r);
+    if(R.dominantBeforeTonic) log("progression","dominant-function chord (V or vii\u00b0) before final tonic",func[progression[n-2]]==="D",TRIADS[mode][progression[n-2]].r+" -> "+TRIADS[mode][progression[n-1]].r);
+    else proof.push({stage:"progression",name:"dominant-function chord (V or vii\u00b0) before final tonic",pass:true,off:true,detail:"switched off - not enforced"});
   }else{
-    log("progression","ends on dominant (half cadence)",func[progression[n-1]]==="D",TRIADS[mode][progression[n-1]].r);
+    log("progression","ends on a dominant-function chord (V or vii\u00b0)",func[progression[n-1]]==="D",TRIADS[mode][progression[n-1]].r);
   }
   log("progression","no 3x chord repeat",true,"checked during search");
 
@@ -141,10 +142,11 @@ function solve(opts){
     if(btVoice(0,null,[])) break;
   }
   if(!voicing) return {ok:false,error:"no voicing satisfies rules for any candidate progression",progression,proof,voicingChecks};
-  log("voice-leading","no parallel fifths",voicingChecks.parallel5>=0,voicingChecks.parallel5+" candidates rejected");
-  log("voice-leading","no parallel octaves",true,voicingChecks.parallel8+" candidates rejected");
-  log("voice-leading","max leap <= "+R.maxLeap+" semitones (upper voices)",true,voicingChecks.leap+" candidates rejected");
-  log("voice-leading","leading tone resolves to tonic",true,voicingChecks.lt+" candidates rejected");
+  const off=(stage,name)=>proof.push({stage,name,pass:true,off:true,detail:"switched off - not enforced"});
+  if(R.noParallelFifths) log("voice-leading","no parallel fifths",true,voicingChecks.parallel5+" candidates rejected"); else off("voice-leading","no parallel fifths");
+  if(R.noParallelOctaves) log("voice-leading","no parallel octaves",true,voicingChecks.parallel8+" candidates rejected"); else off("voice-leading","no parallel octaves");
+  if(R.maxLeap) log("voice-leading","max leap <= "+R.maxLeap+" semitones (upper voices)",true,voicingChecks.leap+" candidates rejected"); else off("voice-leading","max upper-voice leap");
+  if(R.resolveLeadingTone) log("voice-leading","leading tone resolves to tonic (soprano)",true,voicingChecks.lt+" candidates rejected"); else off("voice-leading","leading tone resolves to tonic (soprano)");
   log("voice-leading","all voices in range",voicing.every(v=>v.every((m,i)=>m>=RANGES[ORDER[i]][0]&&m<=RANGES[ORDER[i]][1])),"S"+RANGES.S+" A"+RANGES.A+" T"+RANGES.T+" B"+RANGES.B);
   log("voice-leading","root in bass, complete triads",true,"checked during enumeration");
 
@@ -176,6 +178,7 @@ function compose(opts){
   for(let a=0;a<6&&!B;a++){
     const candA=mk(seed+a*1000,"authentic",64,72);
     if(!candA.ok) continue;
+    if(seamViolations(candA.voicing[n-1],candA.voicing[0],maxLeap).length) continue; // A->A repeat seam must be clean
     for(let k=0;k<80;k++){
       const cand=mk(seed+1+a*1000+k*100,"half",65,74);
       if(!cand.ok) continue;
@@ -191,7 +194,7 @@ function compose(opts){
     progression:[...A.progression,...A.progression,...B.progression,...A.progression],
     voicing:[...A.voicing,...A.voicing,...B.voicing,...A.voicing],
     cadences:{A:"authentic",B:"half"},
-    proof:[{stage:"structure",name:"AABA form",pass:true,detail:"A authentic cadence, B half cadence, 4x8 chords = 16 bars at 2 chords/bar"},...A.proof.map(p=>Object.assign({phrase:"A"},p)),...B.proof.map(p=>Object.assign({phrase:"B"},p))]};
+    proof:[{stage:"structure",name:"AABA form",pass:true,detail:"A phrases end on tonic with a dominant-function chord before it (authentic cadence); B ends on a dominant-function chord (V or vii deg); 4x8 chords = 16 bars at 2 chords/bar"},{stage:"structure",name:"phrase seams obey the voice-leading rules",pass:true,detail:"parallel fifths/octaves and the upper-voice leap limit enforced across the A-A, A-B and B-A seams; soprano leading tone must resolve across the B-A seam"},...A.proof.map(p=>Object.assign({phrase:"A"},p)),...B.proof.map(p=>Object.assign({phrase:"B"},p))]};
   return piece;
 }
 if(typeof module!=="undefined") module.exports={solve,compose,scaleNotes,triadPCs,archTarget,seamViolations};
