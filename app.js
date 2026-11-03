@@ -74,16 +74,16 @@ function drawStructure(piece){
   });
   const cad=document.createElement("p");
   cad.className="hint";
-  cad.textContent="Cadences: A phrases end with an authentic cadence on the tonic; the B phrase ends with a half cadence on the dominant, which forces the return to A.";
+  cad.textContent="Cadences: the A phrases end on the tonic (authentic cadence); the B phrase ends on a dominant-function chord (V or vii deg), which leads back to A.";
   el.appendChild(cad);
 }
 function renderProof(piece){
   const ul=$("proof-list");ul.innerHTML="";
   piece.proof.forEach(p=>{
     const li=document.createElement("li");
-    li.className=p.pass?"pass":"fail";
+    li.className=p.off?"off":(p.pass?"pass":"fail");
     const where=p.phrase?("phrase "+p.phrase+" - "):"";
-    li.textContent=(p.pass?"PASS  ":"FAIL  ")+where+p.stage+" / "+p.name+(p.detail?"  ("+p.detail+")":"");
+    li.textContent=(p.off?"OFF  ":(p.pass?"PASS  ":"FAIL  "))+where+p.stage+" / "+p.name+(p.detail?"  ("+p.detail+")":"");
     ul.appendChild(li);
   });
 }
