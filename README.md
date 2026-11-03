@@ -7,7 +7,7 @@ Declare musical rules. Watch a constraint solver find a piece that provably sati
 ## What it does
 
 1. You declare constraints: key, mode, and a set of hard voice-leading rules (no parallel fifths/octaves, no voice crossing, leading-tone resolution, maximum leaps, cadence requirements).
-2. A backtracking constraint solver searches for (a) an 8-chord progression and (b) a four-voice (SATB) voicing that satisfy every switched-on rule, across a 16-bar AABA form. The A phrases end on the tonic with a dominant-function chord (V or vii deg) before them (authentic cadence); the B phrase ends on a dominant-function chord (V or vii deg).
+2. A backtracking constraint solver searches for (a) an 8-chord progression and (b) a four-voice (SATB) voicing that satisfy every switched-on rule, across a 16-bar AABA form. The A phrases end on the tonic; when the penultimate rule is switched on, a dominant-function chord (V or vii deg) precedes each final tonic. The B phrase ends on a dominant-function chord (V or vii deg). Note: the solver accepts vii deg as a dominant-function chord, so these are not necessarily V-I 'authentic cadences' in the strict sense - the UI says exactly what is enforced.
 3. The **proof panel** shows every rule enforced and how many candidate answers were rejected - the search is inspectable, not a black box.
 4. The piece plays in the browser (Web Audio) and exports to WAV. Everything runs client-side; no account, no server, no network calls.
 
