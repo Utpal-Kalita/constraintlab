@@ -74,7 +74,7 @@ function drawStructure(piece){
   });
   const cad=document.createElement("p");
   cad.className="hint";
-  cad.textContent="Cadences: the A phrases end on the tonic (authentic cadence); the B phrase ends on a dominant-function chord (V or vii deg), which leads back to A.";
+  cad.textContent=$("r-tonic").checked?"Phrase endings: the A phrases end on the tonic, each preceded by a dominant-function chord (V or vii deg); the B phrase ends on a dominant-function chord (V or vii deg), which leads back to A.":"Phrase endings: the A phrases end on the tonic; the B phrase ends on a dominant-function chord (V or vii deg), which leads back to A.";
   el.appendChild(cad);
 }
 function renderProof(piece){
