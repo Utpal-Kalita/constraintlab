@@ -68,7 +68,7 @@ function solve(opts){
   let progression=progressions[0];
   log("progression","starts on tonic",progression[0]===0,TRIADS[mode][progression[0]].r);
   if(cadence==="authentic"){
-    log("progression","ends on tonic (authentic cadence)",progression[n-1]===0,TRIADS[mode][progression[n-1]].r);
+    log("progression","ends on tonic",progression[n-1]===0,TRIADS[mode][progression[n-1]].r);
     if(R.dominantBeforeTonic) log("progression","dominant-function chord (V or vii\u00b0) before final tonic",func[progression[n-2]]==="D",TRIADS[mode][progression[n-2]].r+" -> "+TRIADS[mode][progression[n-1]].r);
     else proof.push({stage:"progression",name:"dominant-function chord (V or vii\u00b0) before final tonic",pass:true,off:true,detail:"switched off - not enforced"});
   }else{
@@ -193,8 +193,8 @@ function compose(opts){
     degrees:[...A.degrees,...A.degrees,...B.degrees,...A.degrees],
     progression:[...A.progression,...A.progression,...B.progression,...A.progression],
     voicing:[...A.voicing,...A.voicing,...B.voicing,...A.voicing],
-    cadences:{A:"authentic",B:"half"},
-    proof:[{stage:"structure",name:"AABA form",pass:true,detail:"A phrases end on tonic with a dominant-function chord before it (authentic cadence); B ends on a dominant-function chord (V or vii deg); 4x8 chords = 16 bars at 2 chords/bar"},{stage:"structure",name:"phrase seams obey the voice-leading rules",pass:true,detail:"parallel fifths/octaves and the upper-voice leap limit enforced across the A-A, A-B and B-A seams; soprano leading tone must resolve across the B-A seam"},...A.proof.map(p=>Object.assign({phrase:"A"},p)),...B.proof.map(p=>Object.assign({phrase:"B"},p))]};
+    cadences:{A:"tonic-end",B:"dominant-function-end"},
+    proof:[{stage:"structure",name:"AABA form",pass:true,detail:(!o.rules||o.rules.dominantBeforeTonic!==false)?"A phrases end on tonic, each preceded by a dominant-function chord (V or vii deg); B ends on a dominant-function chord (V or vii deg); 4x8 chords = 16 bars at 2 chords/bar":"A phrases end on tonic; B ends on a dominant-function chord (V or vii deg); 4x8 chords = 16 bars at 2 chords/bar (penultimate dominant-function rule switched off)"},{stage:"structure",name:"phrase seams obey the voice-leading rules",pass:true,detail:"parallel fifths/octaves and the upper-voice leap limit enforced across the A-A, A-B and B-A seams; soprano leading tone must resolve across the B-A seam"},...A.proof.map(p=>Object.assign({phrase:"A"},p)),...B.proof.map(p=>Object.assign({phrase:"B"},p))]};
   return piece;
 }
 if(typeof module!=="undefined") module.exports={solve,compose,scaleNotes,triadPCs,archTarget,seamViolations};
