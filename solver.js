@@ -171,19 +171,36 @@ function seamViolations(v1,v2,maxLeap){
 function compose(opts){
   const o=opts||{};const seed=o.seed||1;const n=o.chordsPerPhrase||8;
   const mk=(sd,cad,lo,hi)=>solve({tonic:o.tonic,mode:o.mode,chordsPerPhrase:n,seed:sd,rules:o.rules,cadence:cad,sopranoTarget:archTarget(n,lo,hi)});
-  const maxLeap=(o.rules&&o.rules.maxLeap!=null)?o.rules.maxLeap:7;
+  const R=Object.assign({noParallelFifths:true,noParallelOctaves:true,noVoiceCrossing:true,maxLeap:7,resolveLeadingTone:true,endOnTonic:true,dominantBeforeTonic:true,noChordRepeat3:true},o.rules||{});
+  const maxLeap=R.maxLeap;
   const tonicPC=scaleNotes(o.tonic||"A",o.mode||"minor")[0];
   const ltPC=(tonicPC+11)%12;
+  // seam check honoring the SAME toggles as the within-phrase rules
+  function seamCheck(v1,v2){
+    const out=[];
+    if(R.noParallelFifths||R.noParallelOctaves){
+      for(let i=0;i<4;i++)for(let j=i+1;j<4;j++){
+        const i1=Math.abs(v1[i]-v1[j])%12,i2=Math.abs(v2[i]-v2[j])%12;
+        const moved=v1[i]!==v2[i]&&v1[j]!==v2[j];
+        if(moved&&i1===i2&&Math.sign(v2[i]-v1[i])===Math.sign(v2[j]-v1[j])){
+          if(R.noParallelFifths&&i1===7) out.push("parallel fifth "+i+"/"+j);
+          if(R.noParallelOctaves&&i1===0) out.push("parallel octave "+i+"/"+j);
+        }
+      }
+    }
+    if(R.maxLeap) for(let i=0;i<3;i++) if(Math.abs(v2[i]-v1[i])>R.maxLeap) out.push("upper leap "+i);
+    return out;
+  }
   let A=null,B=null,bSeed=null;
   for(let a=0;a<6&&!B;a++){
     const candA=mk(seed+a*1000,"authentic",64,72);
     if(!candA.ok) continue;
-    if(seamViolations(candA.voicing[n-1],candA.voicing[0],maxLeap).length) continue; // A->A repeat seam must be clean
+    if(seamCheck(candA.voicing[n-1],candA.voicing[0]).length) continue; // A->A repeat seam must obey the switched-on rules
     for(let k=0;k<80;k++){
       const cand=mk(seed+1+a*1000+k*100,"half",65,74);
       if(!cand.ok) continue;
-      const viol=[...seamViolations(candA.voicing[n-1],cand.voicing[0],maxLeap),...seamViolations(cand.voicing[n-1],candA.voicing[0],maxLeap)];
-      if(cand.voicing[n-1][0]%12===ltPC&&candA.voicing[0][0]%12!==tonicPC) viol.push("soprano LT unresolved at B->A seam");
+      const viol=[...seamCheck(candA.voicing[n-1],cand.voicing[0]),...seamCheck(cand.voicing[n-1],candA.voicing[0])];
+      if(R.resolveLeadingTone&&cand.voicing[n-1][0]%12===ltPC&&candA.voicing[0][0]%12!==tonicPC) viol.push("soprano LT unresolved at B->A seam");
       if(!viol.length){A=candA;B=cand;bSeed=seed+1+a*1000+k*100;break;}
     }
   }
@@ -194,7 +211,7 @@ function compose(opts){
     progression:[...A.progression,...A.progression,...B.progression,...A.progression],
     voicing:[...A.voicing,...A.voicing,...B.voicing,...A.voicing],
     cadences:{A:"tonic-end",B:"dominant-function-end"},
-    proof:[{stage:"structure",name:"AABA form",pass:true,detail:(!o.rules||o.rules.dominantBeforeTonic!==false)?"A phrases end on tonic, each preceded by a dominant-function chord (V or vii deg); B ends on a dominant-function chord (V or vii deg); 4x8 chords = 16 bars at 2 chords/bar":"A phrases end on tonic; B ends on a dominant-function chord (V or vii deg); 4x8 chords = 16 bars at 2 chords/bar (penultimate dominant-function rule switched off)"},{stage:"structure",name:"phrase seams obey the voice-leading rules",pass:true,detail:"parallel fifths/octaves and the upper-voice leap limit enforced across the A-A, A-B and B-A seams; soprano leading tone must resolve across the B-A seam"},...A.proof.map(p=>Object.assign({phrase:"A"},p)),...B.proof.map(p=>Object.assign({phrase:"B"},p))]};
+    proof:[{stage:"structure",name:"AABA form",pass:true,detail:(!o.rules||o.rules.dominantBeforeTonic!==false)?"A phrases end on tonic, each preceded by a dominant-function chord (V or vii deg); B ends on a dominant-function chord (V or vii deg); 4x8 chords = 16 bars at 2 chords/bar":"A phrases end on tonic; B ends on a dominant-function chord (V or vii deg); 4x8 chords = 16 bars at 2 chords/bar (penultimate dominant-function rule switched off)"},{stage:"structure",name:"phrase seams obey the voice-leading rules",pass:true,detail:(()=>{const b=[];const w=[];if(R.noParallelFifths)w.push("fifths");if(R.noParallelOctaves)w.push("octaves");if(w.length)b.push("no parallel "+w.join("/"));if(R.maxLeap)b.push("upper-voice leap limit");let d=b.length?b.join(" and ")+" enforced across the A-A, A-B and B-A seams":"no seam rules switched on";if(R.resolveLeadingTone)d+=(b.length?"; ":"")+"soprano leading tone must resolve across the B-A seam";return d;})()},...A.proof.map(p=>Object.assign({phrase:"A"},p)),...B.proof.map(p=>Object.assign({phrase:"B"},p))]};
   return piece;
 }
 if(typeof module!=="undefined") module.exports={solve,compose,scaleNotes,triadPCs,archTarget,seamViolations};
