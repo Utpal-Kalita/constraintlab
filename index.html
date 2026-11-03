@@ -35,7 +35,7 @@
     <label><input type="checkbox" id="r-par8" checked> No parallel octaves</label>
     <label><input type="checkbox" id="r-cross" checked> No voice crossing</label>
     <label><input type="checkbox" id="r-lt" checked> Leading tone resolves (soprano)</label>
-    <label><input type="checkbox" id="r-tonic" checked> Phrase ends on tonic / dominant cadence</label>
+    <label><input type="checkbox" id="r-tonic" checked> Dominant function (V or vii&deg;) before the final tonic</label>
     <label>Max upper-voice leap
       <select id="r-leap"><option value="5">major 3rd</option><option value="7" selected>perfect 5th</option><option value="12">octave</option></select>
     </label>
@@ -71,7 +71,7 @@
 <section class="panel about">
   <h2>What this is (and is not)</h2>
   <p>Constraint programming is an established research technique for music composition (used in academic systems since the 1990s). ConstraintLab is a transparent browser implementation: the rules, the search, and the rejections are all visible on this page. It runs entirely on your device - no account, no server, no network calls.</p>
-  <p>Current limits, stated plainly: root-position triads only, four voices, one 16-bar AABA form, harmonic minor or major keys. The voice-leading rules follow standard practice (the leading-tone rule applies to the soprano). This is a composition <em>toy with a proof</em>, not a replacement for a composer.</p>
+  <p>Current limits, stated plainly: root-position triads only, four voices, one 16-bar AABA form with the A phrase repeated identically, harmonic minor or major keys. The leading-tone rule applies to the soprano, within each phrase and across the B-to-A seam; parallel fifths/octaves and the upper-voice leap limit are also enforced across the phrase seams. This is a composition <em>toy with a proof</em>, not a replacement for a composer.</p>
   <p class="hint">Built with AI assistance (design and code), disclosed per hackathon rules.</p>
 </section>
 </main>
