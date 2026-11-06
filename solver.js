@@ -23,6 +23,10 @@ const ORDER=["S","A","T","B"];
 
 function solve(opts){
   const {tonic="A",mode="minor",chordsPerPhrase=8,seed=1,rules={},cadence="authentic"}=opts||{};
+  // Optional seam constraints: the chord voiced immediately before slot 0 (seamPrev) and
+  // immediately after slot n-1 (seamNext, with its pitch classes seamNextPCs). When given,
+  // every switched-on voice-leading rule is enforced across those boundaries inside the search.
+  const seamPrev=opts.seamPrev||null, seamNext=opts.seamNext||null, seamNextPCs=opts.seamNextPCs||null;
   const R=Object.assign({noParallelFifths:true,noParallelOctaves:true,noVoiceCrossing:true,maxLeap:7,resolveLeadingTone:true,endOnTonic:true,dominantBeforeTonic:true,noChordRepeat3:true},rules);
   const rand=mulberry32(seed);
   const scale=scaleNotes(tonic,mode);
@@ -105,10 +109,20 @@ function solve(opts){
     }
     return false;
   }
+  function linkOk(prev,c,nextPCs){ // one voice-leading step under the switched-on rules
+    if(R.maxLeap){for(let i=0;i<3;i++) if(Math.abs(c[i]-prev[i])>R.maxLeap) return false;}
+    if(R.noParallelFifths&&parallels(prev,c,7)) return false;
+    if(R.noParallelOctaves&&parallels(prev,c,0)) return false;
+    if(R.resolveLeadingTone&&nextPCs&&prev[0]%12===leadingTonePC&&!nextPCs.includes(leadingTonePC)&&c[0]%12!==tonicPC) return false;
+    return true;
+  }
   let voicing=null;const voicingChecks={parallel5:0,parallel8:0,leap:0,lt:0};
   const sopTarget=opts.sopranoTarget||null;
+  let steps=0;const MAX_STEPS=50000; // deterministic search budget per attempt
   let btVoice=function(ci,prev,chosen){
+    if(++steps>MAX_STEPS) return false;
     if(ci===n){voicing=chosen.slice();return true;}
+    if(ci===0&&seamPrev) prev=seamPrev;
     const d=progression[ci];
     let cands=voicingsFor(d);
     {
@@ -121,6 +135,8 @@ function solve(opts){
       }).sort((x,y)=>x.cost-y.cost||x.c.join(",").localeCompare(y.c.join(","))).map(o=>o.c);
     }
     for(const c of cands){
+      if(steps>MAX_STEPS) return false;
+      if(ci===n-1&&seamNext&&!linkOk(c,seamNext,seamNextPCs)) continue; // seam into the next phrase pruned here, not after completion
       if(prev){
         if(R.maxLeap){let bad=false;for(let i=0;i<3;i++){if(Math.abs(c[i]-prev[i])>R.maxLeap){bad=true;voicingChecks.leap++;break;}}if(bad)continue;}
         if(R.noParallelFifths&&parallels(prev,c,7)){voicingChecks.parallel5++;continue;}
@@ -192,21 +208,24 @@ function compose(opts){
     return out;
   }
   let A=null,B=null,bSeed=null;
-  for(let a=0;a<6&&!B;a++){
+  const compScale=scaleNotes(o.tonic||"A",o.mode||"minor");
+  for(let a=0;a<24&&!B;a++){
     const candA=mk(seed+a*1000,"authentic",64,72);
     if(!candA.ok) continue;
     if(seamCheck(candA.voicing[n-1],candA.voicing[0]).length) continue; // A->A repeat seam must obey the switched-on rules
-    for(let k=0;k<80;k++){
-      const cand=mk(seed+1+a*1000+k*100,"half",65,74);
+    const aLast=candA.voicing[n-1], aFirst=candA.voicing[0];
+    const aFirstPCs=triadPCs(compScale,candA.degrees[0]);
+    // B is solved with the seams as hard constraints inside the search (A->B and B->A),
+    // so disabling a rule can only widen the search space, never break the seam handling.
+    for(let k=0;k<12;k++){
+      const sdB=seed+1+a*1000+k*100;
+      const cand=solve({tonic:o.tonic,mode:o.mode,chordsPerPhrase:n,seed:sdB,rules:o.rules,cadence:"half",sopranoTarget:archTarget(n,65,74),seamPrev:aLast,seamNext:aFirst,seamNextPCs:aFirstPCs});
       if(!cand.ok) continue;
-      const viol=[...seamCheck(candA.voicing[n-1],cand.voicing[0]),...seamCheck(cand.voicing[n-1],candA.voicing[0])];
-      if(R.resolveLeadingTone&&cand.voicing[n-1][0]%12===ltPC&&candA.voicing[0][0]%12!==tonicPC) viol.push("soprano LT unresolved at B->A seam");
-      if(!viol.length){A=candA;B=cand;bSeed=seed+1+a*1000+k*100;break;}
+      A=candA;B=cand;bSeed=sdB;break;
     }
   }
-  if(!A) return {ok:false,error:"A phrase failed for all candidate seeds"};
-  if(!B) return {ok:false,error:"no (A,B) phrase pair satisfies seam constraints (leaps/parallels/LT) in candidate space",A};
-  const piece={ok:true,seed,bSeed,structure:"AABA",phrases:["A","A","B","A"],
+  if(!B) return {ok:false,error:"no (A,B) phrase pair satisfies the switched-on seam constraints (leaps/parallels/leading tone) in the candidate space - try another seed or relax a rule",A};
+  const piece={ok:true,seed,bSeed,tonic:o.tonic||"A",mode:o.mode||"minor",structure:"AABA",phrases:["A","A","B","A"],
     degrees:[...A.degrees,...A.degrees,...B.degrees,...A.degrees],
     progression:[...A.progression,...A.progression,...B.progression,...A.progression],
     voicing:[...A.voicing,...A.voicing,...B.voicing,...A.voicing],
